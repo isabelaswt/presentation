@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWT&CO — Deck</title>
+<style>
+@font-face{font-family:"Helvetica Now Display";src:url(data:font/ttf;base64,__FONT__) format("truetype");font-weight:100 900;font-style:normal}
+:root{--bg:#fff;--fg:#000;--mute:#8a8a8a;--soft:#e4e4e4;--pad:clamp(16px,2vw,28px);--gap:clamp(12px,1.4vw,20px);--s:.4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:500 14px/1.35 "Helvetica Now Display","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{background:none;border:0;cursor:pointer}
+.label{color:var(--mute)}
+
+/* ——— ferramenta (estética do site) ——— */
+.top{display:flex;justify-content:space-between;align-items:center;padding:calc(var(--pad)*.7) var(--pad);border-bottom:1px solid var(--fg);position:sticky;top:0;background:var(--bg);z-index:20}
+.top .brand{display:flex;align-items:center;gap:14px}
+.top .brand svg{width:30px;height:30px;fill:currentColor}
+.top .acts{display:flex;gap:10px;align-items:center}
+.btn{border:1px solid var(--fg);border-radius:999px;padding:7px 18px;line-height:1.2}
+.btn:hover{background:var(--fg);color:var(--bg)}
+.btn.solid{background:var(--fg);color:var(--bg)}
+.btn.solid:hover{opacity:.8}
+.app{display:grid;grid-template-columns:repeat(12,1fr);column-gap:var(--gap);padding:0 var(--pad)}
+.panel{grid-column:1/5;padding:0 0 80px;border-right:1px solid var(--soft);padding-right:var(--gap);height:calc(100vh - 57px);overflow:auto;position:sticky;top:57px}
+.preview{grid-column:5/13;padding:var(--pad) 0 80px;display:flex;flex-direction:column;gap:28px}
+.sec{border-top:1px solid var(--fg);padding:12px 0 22px}
+.sec:first-child{border-top:0}
+.sec h2{font-weight:500;display:flex;justify-content:space-between;margin-bottom:14px}
+.sec h2 i{font-style:normal;color:var(--mute)}
+.f{display:block;margin-bottom:12px}
+.f>span{display:block;color:var(--mute);margin-bottom:4px}
+.f input[type=text],.f textarea{width:100%;border:1px solid var(--fg);border-radius:0;padding:8px 10px;background:var(--bg);outline:0}
+.f textarea{resize:vertical;min-height:70px;line-height:1.35}
+.f input:focus,.f textarea:focus{box-shadow:0 0 0 2px var(--fg)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.swatches{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sw{width:26px;height:26px;border-radius:50%;border:1px solid var(--fg);cursor:pointer}
+.sw.on{outline:2px solid var(--fg);outline-offset:2px}
+input[type=color]{width:26px;height:26px;border:1px solid var(--fg);border-radius:50%;padding:0;background:none;cursor:pointer}
+.slot{display:flex;gap:12px;align-items:center}
+.slot .th{width:56px;height:56px;border:1px solid var(--soft);background:#f3f3f3 center/cover no-repeat;flex:none}
+.drop{border:1px dashed var(--fg);padding:26px 14px;text-align:center;cursor:pointer;margin-bottom:14px}
+.drop:hover,.drop.over{background:#f3f3f3}
+.drop small{display:block;color:var(--mute);margin-top:4px}
+.imgs{display:flex;flex-direction:column}
+.img{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--soft)}
+.img .th{width:44px;height:44px;background:#f3f3f3 center/cover no-repeat}
+.img .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.img .nm small{display:block;color:var(--mute)}
+.img .ct{display:flex;gap:2px}
+.img .ct button{padding:4px 7px;border:1px solid transparent;border-radius:999px}
+.img .ct button:hover{border-color:var(--fg)}
+.hint{color:var(--mute);margin-top:8px}
+.cap{display:flex;justify-content:space-between;margin-bottom:8px}
+.cap i{font-style:normal;color:var(--mute)}
+.frame{width:calc(2000px*var(--s));height:calc(1125px*var(--s));position:relative;overflow:hidden;box-shadow:0 0 0 1px var(--soft)}
+.dropveil{position:fixed;inset:0;background:rgba(255,255,255,.92);display:none;align-items:center;justify-content:center;font-size:40px;letter-spacing:-.04em;z-index:99;border:2px dashed #000;margin:14px}
+body.dragging .dropveil{display:flex}
+@media(max-width:900px){.panel{grid-column:1/13;position:static;height:auto;border:0}.preview{grid-column:1/13}}
+
+/* ——— slides: palco fixo de 2000×1125 ——— */
+.slide{width:2000px;height:1125px;position:absolute;left:0;top:0;transform:scale(var(--s));transform-origin:0 0;overflow:hidden;background:#fffff3;color:#1a1a1a;font-family:"Helvetica Now Display","Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:500;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.slide *{position:static}
+.slide .abs{position:absolute}
+.hd{position:absolute;left:52px;right:53px;top:47px;display:flex;justify-content:space-between;font-size:13.5px;line-height:18px;letter-spacing:.015em;z-index:5}
+.hd span:nth-child(2){position:absolute;left:0;right:0;text-align:center}
+.lg{position:absolute;left:52px;bottom:53px;width:47px;height:47px;z-index:5}
+.lg svg{width:100%;height:100%;display:block;fill:currentColor}
+.fit{white-space:nowrap;letter-spacing:-.045em;line-height:1}
+.full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.ph{background:#ebe8dc;color:#9a978b;display:flex;align-items:center;justify-content:center;font-size:20px}
+
+/* capa */
+.cv-name{position:absolute;left:46px;top:141px;font-size:180px;-webkit-text-stroke:.016em currentColor}
+.cv-url{position:absolute;left:52px;top:324px;font-size:13.5px;letter-spacing:.015em;line-height:18px}
+.cv-title{position:absolute;right:55px;top:308px;-webkit-text-stroke:.016em currentColor;font-size:175px;line-height:145px;text-align:right;letter-spacing:-.045em;white-space:nowrap}
+.cv-ig{position:absolute;right:57px;top:676px;font-size:13.5px;letter-spacing:.015em;line-height:18px}
+.pills{position:absolute;display:flex;flex-wrap:wrap;gap:18px 18px}
+.pill{display:flex;height:44px;border:1.5px solid #1a1a1a;border-radius:22px;font-size:13.5px;letter-spacing:.03em;overflow:hidden;align-items:stretch}
+.pill b{font-weight:500;width:108px;padding-left:22px;border-right:1.5px solid #1a1a1a;display:flex;align-items:center;flex:none}
+.pill span{flex:1;text-align:right;padding-right:22px;display:flex;align-items:center;justify-content:flex-end;white-space:nowrap}
+.pill.sm{padding:0 22px;align-items:center;justify-content:space-between}
+/* contexto */
+.cx-name{position:absolute;left:46px;top:222px;font-size:112px;letter-spacing:-.045em}
+.cx-txt{position:absolute;left:581px;top:393px;width:430px;font-size:17px;line-height:23px;letter-spacing:.005em;hyphens:auto;-webkit-hyphens:auto}
+.cx-txt p{margin-bottom:35px}
+.cx-img{position:absolute;left:1187px;top:178px;width:690px;height:734px;z-index:3;object-fit:cover}
+.cx-img.ph{display:flex}
+.cx-word{position:absolute;left:410px;top:834px;font-size:264px;z-index:1;letter-spacing:-.035em}
+/* divisor */
+.dv-word{position:absolute;left:410px;top:834px;font-size:264px;letter-spacing:-.035em}
+/* final */
+.fn-title{position:absolute;left:50px;top:38px;font-size:112px;-webkit-text-stroke:.022em currentColor;letter-spacing:-.045em}
+.fn-img{position:absolute;left:52px;top:268px;width:1894px;height:804px;object-fit:cover}
+.fn-img.ph{display:flex}
+.fn-sm{position:absolute;right:54px;top:123px;font-size:13.5px;letter-spacing:.015em;line-height:18px}
+.fn-lg{position:absolute;right:54px;top:200px;width:50px;height:50px}
+.fn-lg svg{width:100%;height:100%;display:block;fill:#1a1a1a}
+
+/* ——— exportar PDF: cada slide vira uma página 2000×1125 ——— */
+@page{size:2000px 1125px;margin:0}
+@media print{
+  :root{--s:1 !important}
+  html,body{background:#fffff3}
+  .top,.panel,.cap,.dropveil{display:none !important}
+  .app{display:block;padding:0}
+  .preview{padding:0;gap:0;display:block}
+  .frame{box-shadow:none;break-after:page;page-break-after:always}
+  .frame:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="logo" viewBox="0 0 213.15 213.15">__LOGO__</symbol></svg>
+<div class="dropveil">Solte as imagens aqui</div>
+
+<div class="top">
+  <div class="brand"><svg viewBox="0 0 213.15 213.15"><use href="#logo"/></svg><span>Deck <span class="label">— apresentação de imagens</span></span></div>
+  <div class="acts"><button class="btn" id="reset">Limpar tudo</button><button class="btn solid" id="pdf">Exportar PDF</button></div>
+</div>
+
+<div class="app">
+<aside class="panel">
+  <div class="sec">
+    <h2>Capa <i>01</i></h2>
+    <label class="f"><span>Cliente</span><input type="text" id="client"></label>
+    <label class="f"><span>Título (2 linhas)</span><textarea id="title" style="min-height:62px"></textarea></label>
+    <div class="row2">
+      <label class="f"><span>Projeto (pílula)</span><input type="text" id="project" placeholder="igual ao cliente"></label>
+      <label class="f"><span>Contexto (pílula)</span><input type="text" id="scope"></label>
+      <label class="f"><span>Data</span><input type="text" id="date"></label>
+      <label class="f"><span>Versão</span><input type="text" id="version"></label>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Contexto <i>02</i></h2>
+    <label class="f"><span>Texto (linha em branco = novo parágrafo)</span><textarea id="ctx" style="min-height:190px"></textarea></label>
+    <p class="hint">A foto desta página é a primeira imagem da lista de imagens full.</p>
+  </div>
+
+  <div class="sec">
+    <h2>Página que antecede as imagens <i>03</i></h2>
+    <label class="f"><span>Palavra</span><input type="text" id="divWord"></label>
+    <div class="f"><span>Cor de fundo</span><div class="swatches" id="sws"></div></div>
+  </div>
+
+  <div class="sec">
+    <h2>Imagens full <i id="count">0</i></h2>
+    <div class="drop" id="drop">Arraste as imagens ou clique para subir<small>JPG, PNG, WebP — cada uma vira uma página cheia · também funciona colar (⌘V)</small></div>
+    <input type="file" id="file" accept="image/*" multiple hidden>
+    <div class="imgs" id="imgs"></div>
+    <p class="hint">AUTO: cabeçalho e logo ficam claros ou escuros conforme a imagem.</p>
+  </div>
+
+  <div class="sec">
+    <h2>Final <i>última</i></h2>
+    <p class="hint" style="margin:0 0 10px">A foto do final é uma das imagens da apresentação, sorteada.</p><button class="btn" id="reroll">Sortear outra</button>
+  </div>
+
+  <p class="hint">Exportar PDF abre a impressão: escolha “Salvar como PDF”, margens “Nenhuma” e ative “Elementos gráficos de plano de fundo”.</p>
+</aside>
+
+<main class="preview" id="preview"></main>
+</div>
+<input type="file" id="slotfile" accept="image/*" hidden>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const INK='#1a1a1a',CREAM='#fffff3',LIGHT='#fffff3';
+const PRESETS=['#82062a','#1a1a1a','#ff3324','#fcb3d6','#fffff3'];
+const now=new Date();
+const DEF={client:'KOMBO',title:'VISUAL ID &\nPACKAGING',project:'',scope:'BRANDING & PACKAGING',
+  date:String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(),version:'#01',
+  ctx:'',divWord:'FRASCOS',divColor:'#82062a'};
+let S=Object.assign({},DEF);
+try{Object.assign(S,JSON.parse(localStorage.getItem('swt-deck')||'{}'))}catch(e){}
+const IM={list:[]}; // imagens só vivem nesta sessão
+let uid=0;
+
+/* ——— campos ——— */
+const FIELDS=['client','title','project','scope','date','version','ctx','divWord'];
+FIELDS.forEach(k=>{const el=$('#'+k);el.value=S[k]??'';el.addEventListener('input',()=>{S[k]=el.value;save();render()})});
+function save(){try{localStorage.setItem('swt-deck',JSON.stringify(S))}catch(e){}}
+const sws=$('#sws');
+function drawSw(){sws.innerHTML=PRESETS.map(c=>`<span class="sw ${c===S.divColor?'on':''}" data-c="${c}" style="background:${c}"></span>`).join('')+`<input type="color" id="cc" value="${S.divColor}">`;
+  sws.querySelectorAll('.sw').forEach(e=>e.onclick=()=>{S.divColor=e.dataset.c;save();drawSw();render()});
+  $('#cc').oninput=e=>{S.divColor=e.target.value;save();render()};}
+drawSw();
+
+/* ——— imagens ——— */
+function lumOf(img,x0,y0,x1,y1){ // luminância média (0–1) de uma região, já com o recorte "cover" 16:9
+  const W=200,H=112,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const r=Math.max(W/img.naturalWidth,H/img.naturalHeight),w=img.naturalWidth*r,h=img.naturalHeight*r;
+  g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+  const d=g.getImageData(Math.floor(x0*W),Math.floor(y0*H),Math.max(1,Math.floor((x1-x0)*W)),Math.max(1,Math.floor((y1-y0)*H))).data;
+  let t=0,n=0;for(let i=0;i<d.length;i+=4){t+=(0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2])/255;n++}return t/n}
+function addFiles(files){
+  [...files].filter(f=>f.type.startsWith('image/')).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).forEach(f=>{
+    const it={id:++uid,name:f.name,url:URL.createObjectURL(f),hdr:'auto',lh:.9,ll:.9};
+    IM.list.push(it);
+    const im=new Image();im.onload=()=>{try{it.lh=lumOf(im,0,.02,1,.09);it.ll=lumOf(im,.02,.9,.06,.96)}catch(e){}render();list()};im.src=it.url;
+  });list();render();
+}
+function list(){
+  $('#count').textContent=IM.list.length;
+  $('#imgs').innerHTML=IM.list.map((it,i)=>`<div class="img" data-i="${i}"><div class="th" style="background-image:url('${it.url}')"></div><div class="nm">${esc(it.name)}<small>página ${i+4}</small></div><div class="ct"><button data-a="hdr" title="cor do cabeçalho e do logo">${it.hdr==='auto'?'AUTO':it.hdr==='light'?'CLARO':'ESCURO'}</button><button data-a="up">↑</button><button data-a="dn">↓</button><button data-a="rm">×</button></div></div>`).join('');
+}
+$('#imgs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const i=+b.closest('.img').dataset.i,it=IM.list[i],a=b.dataset.a;
+  if(a==='hdr')it.hdr={auto:'light',light:'dark',dark:'auto'}[it.hdr];
+  if(a==='up'&&i>0)[IM.list[i-1],IM.list[i]]=[IM.list[i],IM.list[i-1]];
+  if(a==='dn'&&i<IM.list.length-1)[IM.list[i+1],IM.list[i]]=[IM.list[i],IM.list[i+1]];
+  if(a==='rm'){URL.revokeObjectURL(it.url);IM.list.splice(i,1)}
+  list();render()});
+const file=$('#file'),drop=$('#drop');
+drop.onclick=()=>file.click();file.onchange=()=>{addFiles(file.files);file.value=''};
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
+let dc=0;
+addEventListener('dragenter',e=>{if(e.dataTransfer&&[...e.dataTransfer.types].includes('Files')){dc++;document.body.classList.add('dragging')}});
+addEventListener('dragleave',()=>{if(--dc<=0){dc=0;document.body.classList.remove('dragging')}});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();dc=0;document.body.classList.remove('dragging');drop.classList.remove('over');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files)});
+addEventListener('paste',e=>{const fs=[...(e.clipboardData?.files||[])];if(fs.length)addFiles(fs)});
+
+/* foto do final: sorteada entre as imagens */
+let finalId=null;
+function finalImg(){let it=IM.list.find(x=>x.id===finalId);if(!it&&IM.list.length){it=IM.list[Math.floor(Math.random()*IM.list.length)];finalId=it.id}return it}
+$('#reroll').onclick=()=>{if(IM.list.length>1){const o=IM.list.filter(x=>x.id!==finalId);finalId=o[Math.floor(Math.random()*o.length)].id}render()};
+
+/* ——— slides ——— */
+const year=()=>(S.date.match(/\d{4}/)||[now.getFullYear()])[0];
+const hd=c=>`<div class="hd" style="color:${c}"><span>SWEETY&amp;CO ®${year()}</span><span>MADE BY SWT&amp;CO.</span><span>®${year()}</span></div>`;
+const lg=c=>`<div class="lg" style="color:${c}"><svg viewBox="0 0 213.15 213.15"><use href="#logo"/></svg></div>`;
+const isDark=h=>{const n=parseInt(h.slice(1),16);return (.2126*(n>>16)+.7152*((n>>8)&255)+.0722*(n&255))/255<.55};
+const pill=(l,v,w)=>`<div class="pill" style="width:${w}px"><b>${esc(l)}</b><span>${esc(v)}</span></div>`;
+
+function slides(){
+  const out=[];const client=(S.client||'').trim()||' ';
+  const lines=(S.title||'').split('\n').map(esc).join('<br>');
+  out.push({n:'Capa',h:`<div class="slide">${hd(INK)}
+    <div class="cv-name fit abs" data-fs="180" data-mw="1900">${esc(client)}</div><div class="cv-url">SWT.CO</div>
+    <div class="cv-title abs fit-t" data-fs="175" data-mw="1900">${lines}</div>
+    <div class="cv-ig">@SWTANDCO</div>
+    <div class="pills" style="left:1010px;top:967px;width:932px">${pill('PROJECT',S.project||client,450)}${pill('DATE',S.date,269)}${pill('VERSION',S.version,176)}${pill('CONTEXT',S.scope,449)}</div>
+  </div>`});
+  const paras=(S.ctx||'').split(/\n\s*\n/).filter(p=>p.trim()).map(p=>`<p>${esc(p.trim()).replace(/\n/g,' ')}</p>`).join('');
+  out.push({n:'Contexto',h:`<div class="slide">${hd(INK)}
+    <div class="cx-name fit abs" data-fs="112" data-mw="1000">${esc(client)}</div>
+    <div class="cx-txt">${paras}</div>
+    ${IM.list[0]?`<img class="cx-img abs" src="${IM.list[0].url}">`:``}
+    <div class="cx-word fit abs" data-fs="264" data-mw="1560">CONTEXT</div>
+  </div>`});
+  const dc=S.divColor,dk=isDark(dc),tc=dk?'#e6e2d6':INK,hc=dk?'#fffff3':INK;
+  out.push({n:'Divisor',h:`<div class="slide" style="background:${dc};color:${tc}">${hd(hc)}
+    <div class="dv-word fit abs" data-fs="264" data-mw="1560">${esc((S.divWord||'').trim()||' ')}</div>${lg(hc)}</div>`});
+  IM.list.forEach((it,i)=>{
+    const th=it.hdr==='auto'?(it.lh<.5?LIGHT:INK):it.hdr==='light'?LIGHT:INK;
+    const tl=it.hdr==='auto'?(it.ll<.5?LIGHT:INK):it.hdr==='light'?LIGHT:INK;
+    out.push({n:'Imagem '+(i+1),h:`<div class="slide" style="background:#111"><img class="full" src="${it.url}">${hd(th)}${lg(tl)}</div>`});
+  });
+  out.push({n:'Final',h:`<div class="slide">
+    <div class="fn-title fit abs" data-fs="112" data-mw="940">OBRIGADO.</div>
+    <div class="pills" style="left:1028px;top:54px;width:920px;gap:10px 18px">
+      <div class="pill sm" style="width:450px"><span style="padding:0;flex:none">MADE BY SWT&amp;CO.</span><span style="padding:0;flex:none">®${year()}</span></div>
+      <div class="pill sm" style="width:450px"><span style="padding:0;flex:none">INSTAGRAM.COM/SWTANDCO</span><span style="padding:0;flex:none">SWT.CO</span></div>
+      <div class="pills" style="position:static;gap:10px">
+        <div class="pill sm">PORTO ALEGRE</div><div class="pill sm">RS/BRASIL</div><div class="pill sm">HELLO@SWT.CO</div></div>
+    </div>
+    <div class="fn-sm">SWEETY&amp;CO ®${year()}</div>
+    <div class="fn-lg"><svg viewBox="0 0 213.15 213.15"><use href="#logo"/></svg></div>
+    ${(()=>{const f=finalImg();return f?`<img class="fn-img" src="${f.url}">`:''})()}
+  </div>`});
+  return out;
+}
+
+function fit(root){
+  root.querySelectorAll('[data-fs]').forEach(el=>{
+    el.style.fontSize=el.dataset.fs+'px';
+    const w=el.offsetWidth,mw=+el.dataset.mw;
+    if(w>mw)el.style.fontSize=(el.dataset.fs*mw/w)+'px';
+  });
+}
+let raf=0;
+function render(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
+  const pv=$('#preview'),sl=slides();
+  pv.innerHTML=sl.map((s,i)=>`<section><div class="cap"><span>${String(i+1).padStart(2,'0')} — ${s.n}</span><i>${sl.length} páginas</i></div><div class="frame">${s.h}</div></section>`).join('');
+  fit(pv);
+  document.title=((S.client||'DECK').trim()+'_'+(S.divWord||'').trim()).replace(/\s+/g,'_');
+})}
+function scale(){const p=$('#preview');const w=p.clientWidth;if(w)document.documentElement.style.setProperty('--s',(w/2000).toFixed(4))}
+addEventListener('resize',scale);
+
+$('#pdf').onclick=()=>{fit(document);window.print()};
+$('#reset').onclick=()=>{if(!confirm('Limpar texto e imagens?'))return;try{localStorage.removeItem('swt-deck')}catch(e){}location.reload()};
+
+scale();render();list();
+(document.fonts?.ready||Promise.resolve()).then(()=>{scale();render()});
+</script>
+</body>
+</html>
